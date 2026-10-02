@@ -255,7 +255,7 @@ function quiz() {
       <div class="quiz-labels"><span class="pill">${state.review ? '오답 복습' : currentCategory().name}</span><span class="pill neutral">${DIFFICULTIES[state.difficulty]}</span><span class="question-number">QUESTION <strong>${String(state.index + 1).padStart(2,'0')}</strong> / ${String(state.questions.length).padStart(2,'0')}</span></div>
       <div class="progress" role="progressbar" aria-label="퀴즈 진행률" aria-valuemin="0" aria-valuemax="${state.questions.length}" aria-valuenow="${state.index + (state.submitted ? 1 : 0)}"><span style="width:${(state.index + (state.submitted ? 1 : 0))/state.questions.length*100}%"></span></div>
       <span class="question-category" lang="en">${esc(q.category)}</span>
-      <h1 id="question-title" class="question-title" lang="en">${esc(q.question)}</h1>
+      <h1 id="question-title" class="question-title" lang="en" tabindex="-1">${esc(q.question)}</h1>
       <p class="question-instruction">가장 알맞은 답을 하나 선택하세요.</p>
       <div class="answer-options" role="group" aria-label="답안 보기">${q.answers.map((a,i) => {
         const selected = state.selected === a.id;
@@ -285,10 +285,18 @@ function dialog() {
   const quit = state.dialog !== 'clear';
   return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-heading"><span class="modal-icon">${icon(quit ? 'flag' : 'clock')}</span><h2 id="dialog-heading">${quit ? '챌린지를 그만할까요?' : '최근 기록을 지울까요?'}</h2><p>${quit ? '진행 중인 답안은 저장되지 않습니다.' : '이 브라우저에 저장된 최근 기록이 삭제됩니다.'}</p><div class="modal-actions"><button class="secondary" data-action="cancel-dialog">${quit ? '계속 풀기' : '취소'}</button><button class="primary" data-action="confirm-dialog">${quit ? '그만하기' : '기록 지우기'}</button></div></section></div>`;
 }
-function render(focus = false) {
+function render(focus = false, preserveScroll = false) {
+  const position = preserveScroll ? { left: window.scrollX, top: window.scrollY, behavior: 'instant' } : null;
+  // Keep the current offset reachable even when the next question is shorter.
+  if (preserveScroll) app.style.minHeight = `${Math.ceil(window.scrollY + window.innerHeight)}px`;
+  else if (state.view !== 'quiz' || focus) app.style.minHeight = '';
   app.innerHTML = shell(({home, quiz, result, history}[state.view] || home)());
   if (state.dialog) app.querySelector('[data-action="cancel-dialog"]').focus();
-  else if (focus) { document.querySelector('#main').focus({ preventScroll: true }); window.scrollTo({top:0, behavior:'instant'}); }
+  else if (focus) {
+    app.querySelector(preserveScroll ? '#question-title' : '#main').focus({ preventScroll: true });
+    if (!preserveScroll) window.scrollTo({top:0, behavior:'instant'});
+  }
+  if (position) window.scrollTo(position);
 }
 function navigate(view) {
   if (state.view === 'quiz') { state.dialogOpener = document.activeElement?.matches('.quit-button') ? '.quit-button' : document.activeElement?.matches('.nav-item') ? `.nav-item[data-action="${view}"]` : '.brand'; state.dialog = view; render(); return; }
@@ -348,7 +356,7 @@ function submit() {
 function next() {
   if (state.view !== 'quiz' || !state.submitted) return;
   if (state.index < state.questions.length-1) {
-    state.index++; state.selected = null; state.submitted = false; render(true); return;
+    state.index++; state.selected = null; state.submitted = false; render(true, true); return;
   }
   if (!state.review && state.mode !== 'mock') {
     const scores = scoreAnswers(state.answers);

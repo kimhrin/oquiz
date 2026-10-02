@@ -59,6 +59,8 @@ npm 없이 Node 실행 파일만 있는 환경에서는 `node scripts/build.mjs`
 
 브라우저 테스트에는 Playwright와 Chromium/Chrome이 추가로 필요합니다. Playwright를 설치한 환경에서 로컬 서버를 켜고 `node tests/browser-check.cjs`, `node tests/modes-browser.cjs`를 실행합니다. 설치 위치가 다르면 `PLAYWRIGHT_MODULE`과 `CHROME_PATH`로 지정합니다. `BASE_URL`로 서버 주소를 바꿀 수 있습니다. 실제 외부 호출은 `LIVE_API=1`일 때만 추가 실행하며, 기본 UI 테스트는 고정 응답으로 실행됩니다.
 
+`node tests/scroll-browser.cjs`는 데스크톱·모바일에서 다음 문제 전환 시 스크롤 유지, 긴 문항에서 짧은 문항 전환, 키보드 조작과 오답 복습을 확인합니다.
+
 ## 파일 안내
 
 | 경로 | 내용 |
