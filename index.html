@@ -203,7 +203,7 @@ const state = {
 let controller, requestId = 0;
 const currentCategory = () => CATEGORIES.find(c => c.id === state.category) || CATEGORIES[0];
 const remaining = () => state.mode === 'mock' ? 0 : Math.max(0, Math.ceil((state.cooldownUntil - Date.now()) / 1000));
-const footer = () => `<footer class="footer"><span>하루의 작은 지적 모험, 오퀴즈</span><span>실제 문제 출처 <a href="https://opentdb.com/" target="_blank" rel="noopener">Open Trivia DB</a><span class="footer-dot">·</span><a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></span></footer>`;
+const footer = () => `<footer class="footer"><span>하루의 작은 지적 모험, 오퀴즈</span><a href="./oquiz.html" download="oquiz.html" class="download-html-link" style="color:#6541de;font-weight:700;text-decoration:underline">HTML 다운로드</a><span>실제 문제 출처 <a href="https://opentdb.com/" target="_blank" rel="noopener">Open Trivia DB</a><span class="footer-dot">·</span><a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></span></footer>`;
 
 function shell(content) {
   const stats = state.history;
