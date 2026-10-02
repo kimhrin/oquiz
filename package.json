@@ -1,0 +1,19 @@
+{
+  "name": "oquiz-five",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "오퀴즈 — 5문제 챌린지",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
+    "build:worker": "node scripts/build-worker.mjs",
+    "check:dify": "node scripts/check-dify.mjs",
+    "pretest": "node scripts/build-worker.mjs",
+    "test": "node --test tests/core.test.mjs tests/gateway.test.mjs tests/worker.test.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "repository": { "type": "git", "url": "https://github.com/kimhrin/oquiz.git" },
+  "homepage": "https://kimhrin.github.io/oquiz/"
+}

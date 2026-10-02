@@ -1,0 +1,13 @@
+.sites-runtime/
+node_modules/
+test-output/
+*.log
+.env
+.env.*
+!.env.example
+dist/server/
+.openai/
+.DS_Store
+Thumbs.db
+*.pem
+*.key

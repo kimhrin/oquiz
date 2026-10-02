@@ -1,0 +1,12 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import './export-standalone.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const html=await readFile(path.join(root,'oquiz.html'),'utf8');
+const core=await readFile(path.join(root,'dist/core.js'),'utf8');
+const gateway=(await readFile(path.join(root,'scripts/dify-gateway.mjs'),'utf8')).replace(/^import .*?;\r?\n/gm,'');
+const handler=await readFile(path.join(root,'scripts/worker-handler.mjs'),'utf8');
+await mkdir(path.join(root,'dist/server'),{recursive:true});
+await writeFile(path.join(root,'dist/server/index.js'),`const WEB_APP_HTML=${JSON.stringify(html)};\n${core}\n${gateway}\n${handler}`,'utf8');
+console.log('Standalone HTML and self-contained Worker built');

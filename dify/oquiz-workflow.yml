@@ -1,0 +1,384 @@
+app:
+  description: 분야와 난이도를 받아 Open Trivia DB의 객관식 5문제를 조회하고 응답을 검증합니다. 기존 오퀴즈 HTML의 Proxy 모드와 호환됩니다. 모델 API 키나 플러그인은 필요하지 않습니다.
+  icon: 🧠
+  icon_background: '#E4FBCC'
+  mode: workflow
+  name: 오퀴즈 - 5문제 챌린지 백엔드
+  use_icon_as_answer_icon: false
+  icon_type: emoji
+dependencies: []
+kind: app
+version: 0.3.1
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: code
+      id: start-source-build_url-target
+      source: start
+      sourceHandle: source
+      target: build_url
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: build_url-source-opentdb-target
+      source: build_url
+      sourceHandle: source
+      target: opentdb
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: opentdb-source-validate_response-target
+      source: opentdb
+      sourceHandle: source
+      target: validate_response
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: validate_response-source-output-target
+      source: validate_response
+      sourceHandle: source
+      target: output
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: '분야: any 전체 / 9 일반상식 / 18 컴퓨터 / 11 영화 / 15 게임 / 21 스포츠. 난이도: easy 쉬움 / medium 보통 / hard 어려움.'
+        selected: false
+        title: 01 · 분야와 난이도
+        type: start
+        variables:
+        - label: 분야 (any=전체, 18=컴퓨터)
+          max_length: 16
+          options:
+          - any
+          - '9'
+          - '18'
+          - '11'
+          - '15'
+          - '21'
+          required: true
+          type: select
+          variable: category
+        - label: 난이도 (easy / medium / hard)
+          max_length: 16
+          options:
+          - easy
+          - medium
+          - hard
+          required: true
+          type: select
+          variable: difficulty
+      height: 142
+      id: start
+      position:
+        x: 40
+        y: 220
+      positionAbsolute:
+        x: 40
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: |
+          def main(category: str, difficulty: str) -> dict:
+              if category not in ("any", "9", "18", "11", "15", "21"):
+                  raise ValueError("Unsupported category")
+              if difficulty not in ("easy", "medium", "hard"):
+                  raise ValueError("Unsupported difficulty")
+              url = "https://opentdb.com/api.php?amount=5&type=multiple&encode=url3986&difficulty=" + difficulty
+              if category != "any":
+                  url += "&category=" + category
+              return {"url": url}
+        code_language: python3
+        desc: Validate filters and construct a URL for the fixed OpenTDB host.
+        outputs:
+          url:
+            children: null
+            type: string
+        selected: false
+        title: 02 · 입력 검증과 URL 생성
+        type: code
+        variables:
+        - value_selector:
+          - start
+          - category
+          variable: category
+        - value_selector:
+          - start
+          - difficulty
+          variable: difficulty
+      height: 98
+      id: build_url
+      position:
+        x: 344
+        y: 220
+      positionAbsolute:
+        x: 344
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        authorization:
+          type: no-auth
+          config: null
+        body:
+          type: none
+          data: []
+        desc: OpenTDB requires no API key. Return its body without alteration.
+        headers: ''
+        method: get
+        params: ''
+        retry_config:
+          retry_enabled: false
+          max_retries: 1
+          retry_interval: 5000
+        selected: false
+        ssl_verify: true
+        timeout:
+          connect: 10
+          read: 20
+          write: 20
+        title: 03 · 퀴즈 API GET
+        type: http-request
+        url: '{{#build_url.url#}}'
+        variables: []
+      height: 134
+      id: opentdb
+      position:
+        x: 648
+        y: 220
+      positionAbsolute:
+        x: 648
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: |
+          import json
+
+          def main(body: str, status_code: int) -> dict:
+              result = {
+                  "result": body,
+                  "upstream_http_status": status_code,
+                  "status_code": status_code,
+                  "response_code": -1,
+                  "question_count": 0,
+                  "application_status": "error",
+                  "error_code": "",
+                  "message": ""
+              }
+              if status_code != 200:
+                  result.update(error_code="UPSTREAM_HTTP", message="퀴즈 API가 HTTP 200을 반환하지 않았습니다.")
+                  return result
+              try:
+                  payload = json.loads(body)
+              except (ValueError, TypeError):
+                  result.update(error_code="INVALID_JSON", message="퀴즈 API 응답이 올바른 JSON이 아닙니다.")
+                  return result
+              if not isinstance(payload, dict):
+                  result.update(error_code="INVALID_JSON", message="퀴즈 응답은 JSON 객체여야 합니다.")
+                  return result
+              code = payload.get("response_code")
+              if type(code) is not int:
+                  result.update(error_code="INVALID_DATA", message="응답 코드가 올바르지 않습니다.")
+                  return result
+              result["response_code"] = code
+              if code != 0:
+                  errors = {
+                      1: ("EMPTY", "조건에 맞는 문제가 부족합니다. 분야나 난이도를 바꿔 주세요."),
+                      2: ("PARAMETER", "퀴즈 요청 조건을 확인해 주세요."),
+                      3: ("SESSION", "퀴즈 세션이 유효하지 않습니다."),
+                      4: ("EMPTY", "이 세션의 문제가 소진되었습니다."),
+                      5: ("RATE", "요청 간격이 짧습니다. 6초 이상 기다린 뒤 다시 실행해 주세요.")
+                  }
+                  key, message = errors.get(code, ("INVALID_DATA", "알 수 없는 퀴즈 응답 코드입니다."))
+                  result.update(error_code=key, message=message)
+                  return result
+              rows = payload.get("results")
+              result["question_count"] = len(rows) if isinstance(rows, list) else 0
+              valid = isinstance(rows, list) and len(rows) == 5
+              texts = []
+              if valid:
+                  for row in rows:
+                      if not isinstance(row, dict):
+                          valid = False
+                          break
+                      fields = [row.get("question"), row.get("category"), row.get("correct_answer")]
+                      wrong = row.get("incorrect_answers")
+                      if (row.get("type") != "multiple" or row.get("difficulty") not in ("easy", "medium", "hard")
+                          or not all(isinstance(x, str) and x.strip() for x in fields)
+                          or not isinstance(wrong, list) or len(wrong) != 3
+                          or not all(isinstance(x, str) and x.strip() for x in wrong)):
+                          valid = False
+                          break
+                      if len(set([row["correct_answer"]] + wrong)) != 4:
+                          valid = False
+                          break
+                      texts.append(row["question"])
+                  valid = valid and len(set(texts)) == 5
+              if not valid:
+                  result.update(error_code="INVALID_QUESTIONS", message="고유한 객관식 5문제와 각 문제의 보기 4개를 확인하지 못했습니다.")
+                  return result
+              result.update(application_status="ready", message="객관식 5문제를 준비했습니다.")
+              return result
+        code_language: python3
+        desc: 워크플로 성공과 실제 퀴즈 데이터 성공을 구분합니다. result는 원본 URL 인코딩 JSON을 보존합니다.
+        outputs:
+          result:
+            children: null
+            type: string
+          upstream_http_status:
+            children: null
+            type: number
+          status_code:
+            children: null
+            type: number
+          response_code:
+            children: null
+            type: number
+          question_count:
+            children: null
+            type: number
+          application_status:
+            children: null
+            type: string
+          error_code:
+            children: null
+            type: string
+          message:
+            children: null
+            type: string
+        selected: false
+        title: 04 · 응답 검사와 오류 안내
+        type: code
+        variables:
+        - value_selector:
+          - opentdb
+          - body
+          variable: body
+        - value_selector:
+          - opentdb
+          - status_code
+          variable: status_code
+      height: 98
+      id: validate_response
+      position:
+        x: 952
+        y: 220
+      positionAbsolute:
+        x: 952
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: The gateway checks status and parses result as OpenTDB JSON.
+        outputs:
+        - value_selector:
+          - validate_response
+          - result
+          value_type: string
+          variable: result
+        - value_selector:
+          - validate_response
+          - upstream_http_status
+          value_type: number
+          variable: upstream_http_status
+        - value_selector:
+          - validate_response
+          - status_code
+          value_type: number
+          variable: status_code
+        - value_selector:
+          - validate_response
+          - response_code
+          value_type: number
+          variable: response_code
+        - value_selector:
+          - validate_response
+          - question_count
+          value_type: number
+          variable: question_count
+        - value_selector:
+          - validate_response
+          - application_status
+          value_type: string
+          variable: application_status
+        - value_selector:
+          - validate_response
+          - error_code
+          value_type: string
+          variable: error_code
+        - value_selector:
+          - validate_response
+          - message
+          value_type: string
+          variable: message
+        selected: false
+        title: 05 · 웹앱으로 응답
+        type: end
+      height: 116
+      id: output
+      position: &id001
+        x: 1256
+        y: 220
+      positionAbsolute: *id001
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.8
